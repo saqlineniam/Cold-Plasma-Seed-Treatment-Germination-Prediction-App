@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1758061854264
+current_stage: None
+description: null
+last_updated_timestamp: 1758061854264
+name: SeedGerm_WITH_BASELINE_XGB
+run_id: cebf434a27ff44448a644a78d6701eb8
+run_link: null
+source: file:///C:/Users/saqli/Desktop/Seed Germination code/mlruns/177306709532856541/cebf434a27ff44448a644a78d6701eb8/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///C:/Users/saqli/Desktop/Seed Germination code/mlruns/177306709532856541/cebf434a27ff44448a644a78d6701eb8/artifacts/model
+user_id: null
+version: 1
