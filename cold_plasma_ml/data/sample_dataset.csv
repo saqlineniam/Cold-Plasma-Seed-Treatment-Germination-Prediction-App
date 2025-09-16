@@ -1,0 +1,11 @@
+size of each seed (mm),weight of each seed (gr),baseline SOD (u g-1),base germination rate,base germination potential,base germination index,voltage (kV),power (w),plasma time,gas,germination days,germination rate
+5.1,0.12,12.5,75.2,80.1,1.2,10,100,30,Air,8,82.3
+4.9,0.11,11.8,74.5,79.8,1.1,10,100,30,Air,8,81.7
+5.0,0.12,12.1,76.0,81.2,1.3,15,150,45,Nitrogen,7,84.2
+5.2,0.13,12.8,77.1,82.3,1.4,15,150,45,Nitrogen,7,85.1
+4.8,0.11,11.5,73.8,78.9,1.0,20,200,60,Argon,9,80.5
+5.0,0.12,12.3,75.6,80.7,1.2,20,200,60,Argon,9,83.2
+5.1,0.13,12.6,76.5,81.5,1.3,10,150,45,Air,8,83.8
+4.9,0.12,12.0,74.8,79.9,1.1,15,100,30,Nitrogen,7,82.1
+5.0,0.12,12.2,75.9,81.0,1.2,20,150,60,Argon,9,83.5
+5.1,0.13,12.7,77.0,82.1,1.4,10,200,45,Air,8,84.7

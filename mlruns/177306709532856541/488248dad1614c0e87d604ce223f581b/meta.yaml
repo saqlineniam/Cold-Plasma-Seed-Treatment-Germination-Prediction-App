@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/saqli/Desktop/Seed Germination code/mlruns/177306709532856541/488248dad1614c0e87d604ce223f581b/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '177306709532856541'
+lifecycle_stage: active
+run_id: 488248dad1614c0e87d604ce223f581b
+run_name: WITH_BASELINE__ET
+run_uuid: 488248dad1614c0e87d604ce223f581b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758061577137
+status: 1
+tags: []
+user_id: saqli
