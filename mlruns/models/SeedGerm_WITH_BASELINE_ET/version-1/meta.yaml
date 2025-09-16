@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1758061755260
+current_stage: None
+description: null
+last_updated_timestamp: 1758061755260
+name: SeedGerm_WITH_BASELINE_ET
+run_id: 5ab713080b7843a0b1740487da5c7bf0
+run_link: null
+source: file:///C:/Users/saqli/Desktop/Seed Germination code/mlruns/177306709532856541/5ab713080b7843a0b1740487da5c7bf0/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///C:/Users/saqli/Desktop/Seed Germination code/mlruns/177306709532856541/5ab713080b7843a0b1740487da5c7bf0/artifacts/model
+user_id: null
+version: 1
