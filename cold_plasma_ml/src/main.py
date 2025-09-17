@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import mlflow
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_predict
 from sklearn.pipeline import Pipeline
 from .config import (
     TEST_SIZE, FEATURE_SET_NAME, PRIMARY_METRIC, TARGET,
@@ -93,6 +93,7 @@ def train_hybrid_models(base_models, prep, X_train, y_train, X_test, y_test,
                        feature_cols, cat_cols, random_state=None):
     """Train and evaluate hybrid stacking models."""
     from sklearn.linear_model import RidgeCV
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     
     # Prepare base model predictions for stacking
     base_preds_train = {}
