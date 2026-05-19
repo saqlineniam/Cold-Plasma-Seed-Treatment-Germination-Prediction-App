@@ -1,5 +1,7 @@
 import sys
 import os
+# Must be set before any protobuf/mlflow/opentelemetry import
+os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
