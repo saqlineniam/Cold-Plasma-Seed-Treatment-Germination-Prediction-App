@@ -5,7 +5,8 @@ from sklearn.model_selection import RepeatedKFold, cross_val_score, cross_val_pr
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
-from .preprocessing import get_feature_names_from_preprocessor
+from src.preprocessing import get_feature_names_from_preprocessor
+from src.plots import plot_actual_vs_predicted, plot_residuals
 
 def cv_scores(pipe: Pipeline, X, y, n_splits=5, n_repeats=3, random_state=None):
     """Calculate cross-validation scores for a pipeline."""
@@ -21,19 +22,24 @@ def cv_scores(pipe: Pipeline, X, y, n_splits=5, n_repeats=3, random_state=None):
         "cv_R2_mean": float(cv_r2.mean()), "cv_R2_std": float(cv_r2.std()),
     }
 
-def fit_and_test(pipe: Pipeline, X_train, y_train, X_test, y_test):
+def fit_and_test(pipe: Pipeline, X_train, y_train, X_test, y_test, model_name="Model"):
     """Fit pipeline on training data and evaluate on test data."""
     pipe.fit(X_train, y_train)
     y_pred = pipe.predict(X_test)
     
     test = {
         "test_MAE": float(mean_absolute_error(y_test, y_pred)),
-        "test_RMSE": float(mean_squared_error(y_test, y_pred, squared=False)),
+        "test_RMSE": float(np.sqrt(mean_squared_error(y_test, y_pred))),
         "test_R2": float(r2_score(y_test, y_pred)),
     }
     
     preds_df = pd.DataFrame({"y_true": y_test.values, "y_pred": y_pred})
-    return test, preds_df
+    
+    # Generate Plots
+    fig_avp = plot_actual_vs_predicted(y_test.values, y_pred, model_name=model_name)
+    fig_res = plot_residuals(y_test.values, y_pred, model_name=model_name)
+    
+    return test, preds_df, fig_avp, fig_res
 
 def compute_permutation_importance(fitted_pipe: Pipeline, X_test, y_test, scoring="r2", n_repeats=10, random_state=None):
     """Compute permutation importance for a fitted pipeline."""

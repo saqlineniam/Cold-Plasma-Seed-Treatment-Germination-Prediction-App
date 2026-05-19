@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = PROJECT_ROOT / "data" / "New_dataset.xlsx"
-MLFLOW_TRACKING_URI = "file:./mlruns"  # local folder
+DATA_FILE = os.getenv("DATA_FILE", "train.xlsx")
+DATA_PATH = PROJECT_ROOT / "data" / DATA_FILE
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")  # local folder or server URI
 
 # Experiment / Feature Set names
 EXPERIMENT_NAME = "cold_plasma_seed_priming"

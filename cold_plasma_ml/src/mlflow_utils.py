@@ -2,7 +2,7 @@ import mlflow
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
-from .config import EXPERIMENT_NAME, FEATURE_SET_NAME, MLFLOW_TRACKING_URI
+from src.config import EXPERIMENT_NAME, FEATURE_SET_NAME, MLFLOW_TRACKING_URI
 
 def init_mlflow():
     """Initialize MLflow tracking."""

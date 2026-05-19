@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-from .config import DATA_PATH, TARGET, SEED_COLS, PLASMA_COLS, GERMINATION_COLS, CATEGORICAL_COLS
+from src.config import DATA_PATH, TARGET, SEED_COLS, PLASMA_COLS, GERMINATION_COLS, CATEGORICAL_COLS
 
 def load_df(path=DATA_PATH):
     """Load dataset from Excel or CSV file."""

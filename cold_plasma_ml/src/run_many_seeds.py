@@ -6,8 +6,8 @@ import argparse
 import pandas as pd
 import mlflow
 from tqdm import tqdm
-from main import main as run_pipeline
-from config import EXPERIMENT_NAME, MLFLOW_TRACKING_URI
+from src.main import main as run_pipeline
+from src.config import EXPERIMENT_NAME, MLFLOW_TRACKING_URI
 
 def run_multiple_seeds(seeds, experiment_name=None):
     """
