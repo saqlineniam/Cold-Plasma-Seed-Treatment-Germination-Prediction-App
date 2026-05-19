@@ -10,6 +10,7 @@ try:
     from src.main import main as run_training_logic
     from src.run_many_seeds import run_multiple_seeds
     from src.data_loading import load_df, define_columns
+    from src.config import MLFLOW_TRACKING_URI
     _TRAINING_AVAILABLE = True
 except ImportError as e:
     _TRAINING_AVAILABLE = False
@@ -51,6 +52,14 @@ with st.sidebar:
     | **Link** | [arXiv:2510.23657](https://arxiv.org/abs/2510.23657) |
     """)
     st.divider()
+    
+    # MLflow Dashboard Link (Only visible in Docker/Local)
+    if not os.environ.get("STREAMLIT_RUNTIME_ENV"):
+        st.markdown("### 📊 Model Supervision")
+        st.info("Monitoring server detected. Access the dashboard to compare experiments and visualize training metrics.")
+        st.markdown("[🚀 Open MLflow Dashboard](http://localhost:5000)")
+        st.divider()
+
     st.info("This interface implements the ML pipeline described in the paper for predicting seed germination performance after cold plasma treatment.")
 
 st.title("🌱 Cold Plasma Seed Treatment: Germination Prediction")
@@ -160,7 +169,6 @@ with tab2:
         if mode == "Single Model Tuning":
             model_choice = st.selectbox("Select Model Architecture", ["RF", "ET", "GB", "XGB"])
             custom_params = {}
-            # Simplified for UI, but uses robust defaults in main.py
             if model_choice == "XGB":
                 lr = st.select_slider("learning_rate", options=[0.01, 0.05, 0.1], value=0.05)
                 max_d = st.slider("max_depth", 3, 12, 6)
@@ -177,3 +185,11 @@ with tab2:
                 with st.spinner("Evaluating all architectures..."):
                     results = run_training_logic()
                     st.table(results.drop(columns=["best_pipe"], errors="ignore"))
+
+    with col_b:
+        st.subheader("Training Logs")
+        st.write(f"Tracking URI: `{MLFLOW_TRACKING_URI}`")
+        if "localhost" in MLFLOW_TRACKING_URI or "mlflow-server" in MLFLOW_TRACKING_URI:
+             st.success("Connected to MLflow Tracking Server")
+        else:
+             st.info("Using local filesystem for tracking")
