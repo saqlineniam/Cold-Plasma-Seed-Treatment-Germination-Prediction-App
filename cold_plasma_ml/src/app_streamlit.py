@@ -51,7 +51,10 @@ tab1, tab2 = st.tabs(["🚀 Real-Time Inference", "🧪 Experimentation & MLOps"
 
 with tab1:
     st.header("Predict Germination Performance")
-    model_path = "/app/outputs/model.pkl"
+    # Check both absolute (Docker) and relative (Local/Cloud) paths
+    model_path = "outputs/model.pkl"
+    if not os.path.exists(model_path):
+        model_path = "/app/outputs/model.pkl"
     
     if os.path.exists(model_path):
         st.success("✅ Active Model Ready.")
