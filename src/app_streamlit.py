@@ -1,22 +1,16 @@
-import sys
-import os
-# Must be set before any protobuf/mlflow/opentelemetry import
-os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import streamlit as st
 import pandas as pd
 import joblib
+import os
 import numpy as np
-
-# Lazy-load training modules so Tab 1 (inference) works even if mlflow has issues
 try:
     from src.main import main as run_training_logic
     from src.run_many_seeds import run_multiple_seeds
+    from src.data_loading import load_df, define_columns
     _TRAINING_AVAILABLE = True
-except Exception as _import_err:
+except ImportError as e:
     _TRAINING_AVAILABLE = False
-    _TRAINING_ERROR = str(_import_err)
+    _TRAINING_ERROR = str(e)
 
 # Page configuration
 st.set_page_config(
@@ -63,31 +57,36 @@ tab1, tab2 = st.tabs(["🚀 Real-Time Inference", "🧪 Experimentation & MLOps"
 
 with tab1:
     st.header("Predict Germination Performance")
-    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    model_path = os.path.join(_repo_root, "outputs", "model.pkl")
-    if not os.path.exists(model_path):
-        model_path = "/tmp/outputs/model.pkl"
-    if not os.path.exists(model_path):
-        model_path = "/app/outputs/model.pkl"
     
-    if os.path.exists(model_path):
-        st.success("✅ Active Model Ready.")
+    # Priority: 1. Repo root (good model) 2. /app/outputs 3. /tmp (session training)
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_paths = [
+        os.path.join(_repo_root, "outputs", "model.pkl"),
+        "/app/outputs/model.pkl",
+        "outputs/model.pkl",
+        "/tmp/outputs/model.pkl"
+    ]
+    
+    model_path = next((p for p in model_paths if os.path.exists(p)), None)
+    
+    if model_path:
+        st.success(f"✅ Active Model Ready.")
         
         col1, col2, col3 = st.columns(3)
         with col1:
             st.subheader("📦 Seed Traits")
-            base_germ = st.slider("Base Germination Rate", 0.0, 100.0, 75.0)
-            base_idx = st.number_input("Base Germination Index", 0.0, 50.0, 12.0)
-            base_pot = st.number_input("Base Germination Potential", 0.0, 100.0, 80.0)
+            base_germ = st.slider("Base Germination Rate (%)", 0.0, 100.0, 75.0)
+            base_idx = st.number_input("Base Germination Index", 0.0, 100.0, 12.0)
+            base_pot = st.number_input("Base Germination Potential (%)", 0.0, 100.0, 80.0)
             seed_weight = st.number_input("Weight of each seed (gr)", 0.0, 1.0, 0.05, format="%.3f")
             seed_size = st.number_input("Size of each seed (mm)", 0.0, 20.0, 5.0)
-            sod = st.number_input("Baseline SOD (u g-1)", 0.0, 10.0, 1.5)
+            sod = st.number_input("Baseline SOD (u g-1)", 0.0, 100.0, 1.5)
 
         with col2:
             st.subheader("⚡ Plasma Parameters")
-            voltage = st.slider("Voltage (kV)", 0.0, 30.0, 15.0)
-            power = st.number_input("Power (w)", 0.0, 100.0, 25.0)
-            p_time = st.number_input("Plasma Time (s)", 0, 1000, 300)
+            voltage = st.slider("Voltage (kV)", 0.0, 50.0, 15.0)
+            power = st.number_input("Power (w)", 0.0, 500.0, 25.0)
+            p_time = st.number_input("Plasma Time (s)", 0, 3600, 300)
             gas = st.selectbox("Gas Type", ["Air", "O2", "N2", "Ar"])
 
         with col3:
@@ -95,88 +94,83 @@ with tab1:
             germ_days = st.number_input("Germination Days", 1, 30, 7)
 
         if st.button("Run Prediction", type="primary"):
-            input_data = pd.DataFrame([{
-                'size of each seed (mm)': seed_size, 'weight of each seed (gr)': seed_weight,
-                'baseline SOD (u g-1)': sod, 'base germination rate': base_germ,
-                'base germination potential': base_pot, 'base germination index': base_idx,
-                'voltage (kV)': voltage, 'power (w)': power, 'plasma time': p_time,
-                'germination days': germ_days, 'gas': gas
-            }])
-
+            # Construct DataFrame with EXACT naming and ORDERING from training
+            input_dict = {
+                'size of each seed (mm)': seed_size,
+                'weight of each seed (gr)': seed_weight,
+                'baseline SOD (u g-1)': sod,
+                'base germination rate': base_germ,
+                'base germination potential': base_pot,
+                'base germination index': base_idx,
+                'voltage (kV)': voltage,
+                'power (w)': power,
+                'plasma time': p_time,
+                'germination days': germ_days,
+                'gas': gas
+            }
+            
             try:
+                # Load training config to ensure column match if possible
+                if _TRAINING_AVAILABLE:
+                    df_sample = load_df()
+                    f_cols, _, _, _ = define_columns(df_sample)
+                    input_data = pd.DataFrame([input_dict])[f_cols]
+                else:
+                    input_data = pd.DataFrame([input_dict])
+
                 model = joblib.load(model_path)
                 prediction = model.predict(input_data)[0]
+                
+                # Sanity check: Germination rate can't be > 100% or significantly < base
+                prediction = max(0, min(100, prediction))
+                
                 st.markdown("---")
                 res_col1, res_col2 = st.columns(2)
-                with res_col1: st.metric("Predicted Final Rate", f"{prediction:.2f}%")
-                with res_col2: st.metric("Estimated Uplift", f"{prediction - base_germ:+.2f}%")
+                with res_col1: 
+                    st.metric("Predicted Final Rate", f"{prediction:.2f}%")
+                with res_col2: 
+                    uplift = prediction - base_germ
+                    st.metric("Estimated Uplift", f"{uplift:+.2f}%", delta_color="normal")
+                
+                if uplift > 0:
+                    st.balloons()
+                    st.success(f"Targeted treatment predicted to increase germination by {uplift:.1f}%")
+                else:
+                    st.warning("Selected parameters may not provide significant germination uplift.")
+                    
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Prediction Error: {e}")
+                st.info("Tip: This often happens if the input columns don't match the trained model features.")
     else:
-        st.warning("⚠️ No model found. Run training first.")
+        st.warning("⚠️ No pre-trained model found. Please run the training pipeline in the MLOps tab first.")
 
 with tab2:
     st.header("MLOps Laboratory")
-
     if not _TRAINING_AVAILABLE:
         st.error(f"Training modules unavailable: {_TRAINING_ERROR}")
         st.stop()
 
     mode = st.radio("Experiment Mode", ["Single Model Tuning", "Full Pipeline Comparison", "Robustness Test (Many Seeds)"], horizontal=True)
-
     col_a, col_b = st.columns([2, 1])
 
     with col_a:
         if mode == "Single Model Tuning":
-            model_choice = st.selectbox("Select Model Architecture", ["ET", "GB", "XGB"])
+            model_choice = st.selectbox("Select Model Architecture", ["RF", "ET", "GB", "XGB"])
             custom_params = {}
-            if model_choice == "ET":
-                n_est = st.slider("n_estimators", 100, 1000, 500)
-                max_dep = st.slider("max_depth", 1, 30, 8)
-                custom_params = {"model__n_estimators": [n_est], "model__max_depth": [max_dep]}
-            elif model_choice == "GB":
-                lr = st.select_slider("learning_rate", options=[0.001, 0.01, 0.1], value=0.01)
-                n_est = st.slider("n_estimators", 100, 1000, 400)
-                custom_params = {"model__learning_rate": [lr], "model__n_estimators": [n_est]}
-            elif model_choice == "XGB":
+            # Simplified for UI, but uses robust defaults in main.py
+            if model_choice == "XGB":
                 lr = st.select_slider("learning_rate", options=[0.01, 0.05, 0.1], value=0.05)
-                gamma = st.slider("gamma", 0, 20, 10)
-                custom_params = {"model__learning_rate": [lr], "model__gamma": [gamma]}
+                max_d = st.slider("max_depth", 3, 12, 6)
+                custom_params = {"model__learning_rate": [lr], "model__max_depth": [max_d]}
             
             rand_st = st.number_input("Random State", 1, 1000, 42)
             if st.button("🚀 Train Specific Model"):
                 with st.spinner(f"Training {model_choice}..."):
                     run_training_logic(random_state=rand_st, selected_model_name=model_choice, custom_params=custom_params)
-                    st.success("Done!")
+                    st.success("Training Complete! Refresh page to use new model.")
 
         elif mode == "Full Pipeline Comparison":
-            st.info("This will benchmark all base models and hybrid stacking variants.")
-            rand_st = st.number_input("Random State", 1, 1000, 42)
-            if st.button("🚀 Run Comparison Pipeline"):
-                with st.spinner("Executing ET, GB, XGB, and 4 Hybrid models..."):
-                    run_training_logic(random_state=rand_st)
-                    st.success("Pipeline comparison complete!")
-
-        elif mode == "Robustness Test (Many Seeds)":
-            st.warning("Warning: This involves multiple training cycles and may take time.")
-            seeds_input = st.text_input("Enter Seeds (comma separated)", "42, 123, 456")
-            seeds = [int(s.strip()) for s in seeds_input.split(",")]
-            if st.button("🚀 Run Seed Robustness Analysis"):
-                with st.spinner(f"Running pipeline across {len(seeds)} different seeds..."):
-                    combined, stats = run_multiple_seeds(seeds=seeds)
-                    st.table(stats[['model', 'test_R2_mean', 'test_R2_std']])
-                    st.success("Robustness stats logged to MLflow!")
-
-    with col_b:
-        st.subheader("MLOps Dashboard")
-        st.markdown(f"""
-            <a href="http://localhost:5000" target="_blank">
-                <button style="width:100%; height:60px; background-color:#0ea5e9; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
-                    📊 Open MLflow UI
-                </button>
-            </a>
-            """, unsafe_allow_html=True)
-        st.info("Check MLflow for comparison charts, aggregated statistics, and model residuals.")
-
-st.markdown("---")
-st.caption("Developed for Saklain Niam Portfolio - Enterprise MLOps Implementation")
+            if st.button("🏁 Run All Models"):
+                with st.spinner("Evaluating all architectures..."):
+                    results = run_training_logic()
+                    st.table(results.drop(columns=["best_pipe"], errors="ignore"))
