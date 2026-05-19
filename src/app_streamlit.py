@@ -6,8 +6,15 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
-from src.main import main as run_training_logic
-from src.run_many_seeds import run_multiple_seeds
+
+# Lazy-load training modules so Tab 1 (inference) works even if mlflow has issues
+try:
+    from src.main import main as run_training_logic
+    from src.run_many_seeds import run_multiple_seeds
+    _TRAINING_AVAILABLE = True
+except Exception as _import_err:
+    _TRAINING_AVAILABLE = False
+    _TRAINING_ERROR = str(_import_err)
 
 # Page configuration
 st.set_page_config(
@@ -108,11 +115,15 @@ with tab1:
 
 with tab2:
     st.header("MLOps Laboratory")
-    
+
+    if not _TRAINING_AVAILABLE:
+        st.error(f"Training modules unavailable: {_TRAINING_ERROR}")
+        st.stop()
+
     mode = st.radio("Experiment Mode", ["Single Model Tuning", "Full Pipeline Comparison", "Robustness Test (Many Seeds)"], horizontal=True)
-    
+
     col_a, col_b = st.columns([2, 1])
-    
+
     with col_a:
         if mode == "Single Model Tuning":
             model_choice = st.selectbox("Select Model Architecture", ["ET", "GB", "XGB"])
