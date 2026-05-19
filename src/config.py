@@ -5,19 +5,26 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = os.getenv("DATA_FILE", "train.xlsx")
 DATA_PATH = PROJECT_ROOT / "data" / DATA_FILE
-_default_mlruns = str(PROJECT_ROOT / "mlruns") if os.access(str(PROJECT_ROOT), os.W_OK) else "/tmp/mlruns"
-MLFLOW_TRACKING_URI = "file:///tmp/mlruns" if os.environ.get("STREAMLIT_RUNTIME_ENV") else os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+
+# MLflow path fix for Streamlit Cloud
+if os.environ.get("STREAMLIT_RUNTIME_ENV"):
+    # Force fresh local storage in /tmp to avoid any carried-over path issues
+    MLFLOW_TRACKING_URI = "file:///tmp/mlruns"
+    OUTPUTS_DIR = Path("/tmp/outputs")
+else:
+    MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"file:{(PROJECT_ROOT / 'mlruns').as_posix()}")
+    OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 
 # Experiment / Feature Set names
 EXPERIMENT_NAME = "cold_plasma_seed_priming"
 FEATURE_SET_NAME = "WITH_BASELINE"
 
 # ML settings
-PRIMARY_METRIC = "r2"  # for permutation importance scoring
+PRIMARY_METRIC = "r2"
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
 
-# Columns (the code will auto-filter to existing columns)
+# Columns
 TARGET = "germination rate"
 SEED_COLS = [
     "size of each seed (mm)", "weight of each seed (gr)",

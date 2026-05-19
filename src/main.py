@@ -4,11 +4,12 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import mlflow
+import joblib
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_predict
 from sklearn.pipeline import Pipeline
 from src.config import (
     TEST_SIZE, FEATURE_SET_NAME, PRIMARY_METRIC, TARGET,
-    RANDOM_STATE, EXPERIMENT_NAME, MLFLOW_TRACKING_URI
+    RANDOM_STATE, EXPERIMENT_NAME, MLFLOW_TRACKING_URI, OUTPUTS_DIR
 )
 from src.data_loading import load_df, define_columns
 from src.preprocessing import build_preprocessor, get_feature_names_from_preprocessor
@@ -86,7 +87,7 @@ def train_hybrid_models(base_models, prep, X_train, y_train, X_test, y_test,
             metrics = {'test_MAE': mean_absolute_error(y_test, y_pred), 'test_RMSE': np.sqrt(mean_squared_error(y_test, y_pred)), 'test_R2': r2_score(y_test, y_pred)}
             mlflow.log_params({"base_models": ", ".join(base_names), "meta_model": "RidgeCV", "best_alpha": float(meta_model.alpha_)})
             mlflow.log_metrics(metrics)
-            log_predictions_csv(pd.DataFrame({'y_true': y_test, 'y_pred': y_pred, 'model': model_name}), model_name)
+            
             res = {'model': model_name}
             res.update(metrics)
             hybrid_results.append(res)
@@ -103,11 +104,8 @@ def main(random_state=None, selected_model_name=None, custom_params=None):
         prep = build_preprocessor(num_cols, cat_cols)
         models = build_models(random_state=random_state)
         
-        import joblib
-        from src.config import PROJECT_ROOT
-        _outputs_dir = PROJECT_ROOT / "outputs" if os.access(str(PROJECT_ROOT), os.W_OK) else Path("/tmp/outputs")
-        os.makedirs(str(_outputs_dir), exist_ok=True)
-        _model_out = str(_outputs_dir / "model.pkl")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
+        _model_out = str(OUTPUTS_DIR / "model.pkl")
 
         if selected_model_name and selected_model_name in models:
             summary = run_one_model(selected_model_name, (models[selected_model_name][0], custom_params or models[selected_model_name][1]), prep, X_train, y_train, X_test, y_test, feature_cols, cat_cols, random_state)

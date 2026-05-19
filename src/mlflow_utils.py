@@ -1,8 +1,9 @@
 import mlflow
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 from sklearn.pipeline import Pipeline
-from src.config import EXPERIMENT_NAME, FEATURE_SET_NAME, MLFLOW_TRACKING_URI
+from src.config import EXPERIMENT_NAME, FEATURE_SET_NAME, MLFLOW_TRACKING_URI, OUTPUTS_DIR
 
 def init_mlflow():
     """Initialize MLflow tracking."""
@@ -17,7 +18,6 @@ def log_core_params_for_compare(algo_name, estimator, n_features, cat_cols, feat
     mlflow.log_param("n_features", n_features)
     mlflow.log_param("categoricals", ",".join(cat_cols))
     
-    # Log only relevant hyperparameters
     keep = [
         "n_estimators", "max_depth", "learning_rate", "subsample",
         "colsample_bytree", "min_samples_split", "min_samples_leaf", "max_features"
@@ -29,10 +29,11 @@ def log_core_params_for_compare(algo_name, estimator, n_features, cat_cols, feat
 
 def log_predictions_csv(preds_df: pd.DataFrame, model_name: str):
     """Log predictions as a CSV artifact."""
-    path = f"predictions_{model_name}.csv"
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    path = OUTPUTS_DIR / f"predictions_{model_name}.csv"
     preds_df.to_csv(path, index=False)
-    mlflow.log_artifact(path)
-    return path
+    mlflow.log_artifact(str(path))
+    return str(path)
 
 def log_permutation_plot(fig, model_name: str):
     """Log permutation importance plot as an artifact."""
@@ -49,18 +50,14 @@ def log_sklearn_model(fitted_pipe: Pipeline, model_name: str, X_train_sample):
 
 def log_comparison_run(results_df: pd.DataFrame, feature_set_name=FEATURE_SET_NAME):
     """Create a separate run with aggregate comparisons (plots + CSV)."""
-    import matplotlib.pyplot as plt
-    
-    # Save results to CSV
-    csv_path = "model_comparison.csv"
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    csv_path = OUTPUTS_DIR / "model_comparison.csv"
     results_df.to_csv(csv_path, index=True)
     
-    # Start a new MLflow run for the comparison
     with mlflow.start_run(run_name=f"{feature_set_name}__COMPARISON", nested=False):
         mlflow.log_param("feature_set", feature_set_name)
-        mlflow.log_artifact(csv_path)
+        mlflow.log_artifact(str(csv_path))
         
-        # Plot metrics for comparison
         for metric in ["test_MAE", "test_RMSE", "test_R2"]:
             if metric in results_df.columns:
                 fig, ax = plt.subplots(figsize=(7, 3))
@@ -72,7 +69,6 @@ def log_comparison_run(results_df: pd.DataFrame, feature_set_name=FEATURE_SET_NA
                 mlflow.log_figure(fig, f"compare_{metric}.png")
                 plt.close(fig)
         
-        # Plot CV MAE with error bars if available
         if {"cv_MAE_mean", "cv_MAE_std"}.issubset(results_df.columns):
             fig, ax = plt.subplots(figsize=(7, 3))
             ax.bar(
