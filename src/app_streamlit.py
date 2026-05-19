@@ -1,7 +1,10 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 import pandas as pd
 import joblib
-import os
 import numpy as np
 from src.main import main as run_training_logic
 from src.run_many_seeds import run_multiple_seeds
@@ -51,8 +54,10 @@ tab1, tab2 = st.tabs(["🚀 Real-Time Inference", "🧪 Experimentation & MLOps"
 
 with tab1:
     st.header("Predict Germination Performance")
-    # Check both absolute (Docker) and relative (Local/Cloud) paths
-    model_path = "outputs/model.pkl"
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_path = os.path.join(_repo_root, "outputs", "model.pkl")
+    if not os.path.exists(model_path):
+        model_path = "/tmp/outputs/model.pkl"
     if not os.path.exists(model_path):
         model_path = "/app/outputs/model.pkl"
     

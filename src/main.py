@@ -1,4 +1,6 @@
 import argparse
+import os
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import mlflow
@@ -102,12 +104,14 @@ def main(random_state=None, selected_model_name=None, custom_params=None):
         models = build_models(random_state=random_state)
         
         import joblib
-        import os
-        os.makedirs("./outputs", exist_ok=True)
+        from src.config import PROJECT_ROOT
+        _outputs_dir = PROJECT_ROOT / "outputs" if os.access(str(PROJECT_ROOT), os.W_OK) else Path("/tmp/outputs")
+        os.makedirs(str(_outputs_dir), exist_ok=True)
+        _model_out = str(_outputs_dir / "model.pkl")
 
         if selected_model_name and selected_model_name in models:
             summary = run_one_model(selected_model_name, (models[selected_model_name][0], custom_params or models[selected_model_name][1]), prep, X_train, y_train, X_test, y_test, feature_cols, cat_cols, random_state)
-            joblib.dump(summary["best_pipe"], "./outputs/model.pkl")
+            joblib.dump(summary["best_pipe"], _model_out)
             return [summary]
 
         base_results = []
@@ -121,7 +125,7 @@ def main(random_state=None, selected_model_name=None, custom_params=None):
         print(f"\n🏆 Best Model: {best_row['model']} (R2: {best_row['test_R2']:.4f})")
         
         best_model_obj = next((r["best_pipe"] for r in base_results if r["model"] == best_row["model"]), base_results[0]["best_pipe"])
-        joblib.dump(best_model_obj, "./outputs/model.pkl")
+        joblib.dump(best_model_obj, _model_out)
         
         log_comparison_run(all_res.drop(columns=["best_pipe"], errors="ignore").set_index("model"), feature_set_name=f"{FEATURE_SET_NAME}_rs{random_state}")
         return all_res
